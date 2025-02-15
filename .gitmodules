@@ -1,0 +1,8 @@
+[submodule "apps/bptf-analyzer-data-collector"]
+	path = apps/bptf-analyzer-data-collector
+	url = https://github.com/Mohcka/bptf-analyzer-data-collector.git
+	branch = dev
+[submodule "apps/bptf-analyzer-dashboard"]
+	path = apps/bptf-analyzer-dashboard
+	url = https://github.com/Mohcka/bptf-analyzer-dashboard.git
+	branch = dev
