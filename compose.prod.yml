@@ -1,0 +1,50 @@
+include:
+  - compose.db.yml
+
+services:
+  data-collector:
+    extends:
+      file: compose.yml
+      service: data-collector
+    # Expose to host only (not public)
+    ports:
+      - "127.0.0.1:3001:3000"
+    command: /bin/sh -c "bun db:push && node dist/index.js"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - app-network
+
+  dashboard:
+    extends:
+      file: compose.yml
+      service: dashboard
+    # Expose to host only (not public)
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
