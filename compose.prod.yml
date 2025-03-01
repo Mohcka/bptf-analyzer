@@ -9,7 +9,7 @@ services:
     # Expose to host only (not public)
     ports:
       - "127.0.0.1:3001:3000"
-    command: /bin/sh -c "bun db:push && node dist/index.js"
+    command: /bin/sh -c "bun dev:db:push:force && node dist/index.js"
     restart: always
     deploy:
       resources:
