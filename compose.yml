@@ -4,8 +4,6 @@ include:
 services:
   data-collector:
     build: ./apps/bptf-analyzer-data-collector
-    ports:
-      - "3001:3000"
     depends_on:
       - db
     restart: unless-stopped
@@ -17,8 +15,6 @@ services:
       - CLEANUP_INTERVAL_MINUTES=15
   dashboard:
     build: ./apps/bptf-analyzer-dashboard
-    ports:
-      - "3000:3000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
     depends_on:
