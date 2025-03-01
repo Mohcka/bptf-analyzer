@@ -11,6 +11,10 @@ services:
     restart: unless-stopped
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - DASHBOARD_DB_USERNAME=${DASHBOARD_DB_USERNAME}
+      - DASHBOARD_DB_PASSWORD=${DASHBOARD_DB_PASSWORD}
+      - RETENTION_HOURS=6
+      - CLEANUP_INTERVAL_MINUTES=15
   dashboard:
     build: ./apps/bptf-analyzer-dashboard
     ports:
