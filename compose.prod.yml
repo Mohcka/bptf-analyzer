@@ -21,8 +21,6 @@ services:
         delay: 5s
         max_attempts: 3
         window: 120s
-    networks:
-      - app-network
 
   dashboard:
     extends:
@@ -42,9 +40,3 @@ services:
         delay: 5s
         max_attempts: 3
         window: 120s
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
