@@ -10,7 +10,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const menuItems = [
   { name: "Home", icon: Home, href: "/" },
   { name: "Trending", icon: TrendingUp, href: "/trending" },
-  { name: "Stats", icon: BarChart3, href: "/stats" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];
 
