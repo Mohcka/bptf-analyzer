@@ -3,9 +3,7 @@ include:
 
 services:
   data-collector:
-    extends:
-      file: compose.yml
-      service: data-collector
+    image: ghcr.io/${IMAGE_REPO}/data-collector:${RELEASE_VERSION}
     # Expose to host only (not public)
     ports:
       - "127.0.0.1:3001:3000"
@@ -23,9 +21,7 @@ services:
         window: 120s
 
   dashboard:
-    extends:
-      file: compose.yml
-      service: dashboard
+    image: ghcr.io/${IMAGE_REPO}/dashboard:${RELEASE_VERSION}
     # Expose to host only (not public)
     ports:
       - "127.0.0.1:3000:3000"
