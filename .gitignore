@@ -84,6 +84,7 @@ web_modules/
 .env.production.local
 .env.local
 .env.docker
+.env.github
 
 # parcel-bundler cache (https://parceljs.org/)
 .parcel-cache

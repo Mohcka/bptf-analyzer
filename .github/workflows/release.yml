@@ -3,45 +3,180 @@ permissions:
   packages: write
   contents: write
 on:
-  # Deploy on pushes to dev branch
-  push:
+  workflow_run:
+    workflows: ["Build Dashboard", "Build Data Collector"]
+    types:
+      - completed
     branches:
       - dev
+  # Keep manual trigger option
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy'
+        required: false
+        default: 'latest'
 
 jobs:
   push_to_registry:
-    runs-on: ubuntu-24.04
-    if: ${{ github.event.workflow_run.conclusion != 'failure' }}
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     steps:
-      # Checkout latest or specific tag (no submodules flag needed anymore)
       - name: checkout
         if: ${{ github.event.inputs.version == '' || github.event.inputs.version == 'latest' }}
-        uses: actions/checkout@v3
-        
+        uses: actions/checkout@v4
+          
       - name: checkout tag
         if: ${{ github.event.inputs.version != '' && github.event.inputs.version != 'latest' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: refs/tags/${{ github.event.inputs.version }}
           
-      # ...existing code...
+      # Assign environment variables used in subsequent steps
+      - name: Env variable assignment
+        run: echo "image_repository_name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        
+      # TAG_NAME defaults to 'latest' if not a release or manual deployment
+      - name: Assign version
+        run: |
+          echo "TAG_NAME=latest" >> $GITHUB_ENV
+          if [ "${{ github.event.release.tag_name }}" != "" ]; then
+            echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          fi;
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "TAG_NAME=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi;
+          
+      # Set which components to build based on workflow trigger
+      - name: Determine components to build
+        run: |
+          # For manual workflow_dispatch, build both components
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "BUILD_DASHBOARD=true" >> $GITHUB_ENV
+            echo "BUILD_DATA_COLLECTOR=true" >> $GITHUB_ENV
+          else
+            # Check which workflow triggered this
+            WORKFLOW_NAME="${{ github.event.workflow_run.name }}"
+            if [[ "$WORKFLOW_NAME" == "Build Dashboard" ]]; then
+              echo "BUILD_DASHBOARD=true" >> $GITHUB_ENV
+              echo "BUILD_DATA_COLLECTOR=false" >> $GITHUB_ENV
+            elif [[ "$WORKFLOW_NAME" == "Build Data Collector" ]]; then
+              echo "BUILD_DASHBOARD=false" >> $GITHUB_ENV
+              echo "BUILD_DATA_COLLECTOR=true" >> $GITHUB_ENV
+            else
+              # Fallback - build both
+              echo "BUILD_DASHBOARD=true" >> $GITHUB_ENV
+              echo "BUILD_DATA_COLLECTOR=true" >> $GITHUB_ENV
+            fi
+          fi
       
-      # Build and push data-collector image (updated context)
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Build and push data-collector image only if it changed
       - name: Build and push data-collector image
+        if: ${{ env.BUILD_DATA_COLLECTOR == 'true' }}
         uses: docker/build-push-action@v3
-        if: ${{ github.event.inputs.version == '' || github.event.inputs.version == 'latest' }}
         with:
           file: ./apps/bptf-analyzer-data-collector/Dockerfile
-          context: .  # Changed from ./apps/bptf-analyzer-data-collector to root context
+          context: ./apps/bptf-analyzer-data-collector
           push: true
           tags: ghcr.io/${{ env.image_repository_name }}/data-collector:${{ env.TAG_NAME }}
       
-      # Build and push dashboard image (updated context)
+      # Build and push dashboard image only if it changed
       - name: Build and push dashboard image
+        if: ${{ env.BUILD_DASHBOARD == 'true' }}
         uses: docker/build-push-action@v3
-        if: ${{ github.event.inputs.version == '' || github.event.inputs.version == 'latest' }}
         with:
           file: ./apps/bptf-analyzer-dashboard/Dockerfile
-          context: .  # Changed from ./apps/bptf-analyzer-dashboard to root context
+          context: ./apps/bptf-analyzer-dashboard
           push: true
           tags: ghcr.io/${{ env.image_repository_name }}/dashboard:${{ env.TAG_NAME }}
+  
+  deploy_via_ssh:
+    needs: push_to_registry
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout latest or specific tag
+      - name: checkout
+        if: ${{ github.event.inputs.version == '' || github.event.inputs.version == 'latest' }}
+        uses: actions/checkout@v4
+          
+      - name: checkout tag
+        if: ${{ github.event.inputs.version != '' && github.event.inputs.version != 'latest' }}
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ github.event.inputs.version }}
+
+      - name: Repository name fix and env
+        run: |
+          echo "image_repository_name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "domain=${{ secrets.DEPLOY_HOST }}" >> $GITHUB_ENV
+          echo "TAG_NAME=latest" >> $GITHUB_ENV
+          if [ "${{ github.event.release.tag_name }}" != "" ]; then
+            echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          fi;
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "TAG_NAME=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi;
+
+      - name: Create .env file
+        run: |
+          echo "# Autogenerated .env file" > .env
+          echo "POSTGRES_PORT=5432" >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          echo "DASHBOARD_DB_USERNAME=${{ secrets.DASHBOARD_DB_USERNAME }}" >> .env
+          echo "DASHBOARD_DB_PASSWORD=${{ secrets.DASHBOARD_DB_PASSWORD }}" >> .env
+          echo "POSTGRES_DB=bptf_analyzer" >> .env
+          echo "DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}" >> .env
+          echo "PGADMIN_EMAIL=${{ secrets.PGADMIN_EMAIL }}" >> .env
+          echo "PGADMIN_PASSWORD=${{ secrets.PGADMIN_PASSWORD }}" >> .env
+          echo "RETENTION_HOURS=6" >> .env
+          echo "CLEANUP_INTERVAL_MINUTES=15" >> .env
+          echo "NEXT_PUBLIC_API_URL=http://data-collector:3000" >> .env
+          echo "IMAGE_REPO=${{ env.image_repository_name }}" >> .env
+          echo "RELEASE_VERSION=${{ env.TAG_NAME }}" >> .env
+      
+      # Copy docker-compose and .env files to target server
+      - name: Copy files to target server via scp
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          port: 22
+          key: ${{ secrets.DEPLOY_KEY }}
+          source: "./compose.yml,./compose.prod.yml,./compose.db.yml,./.env,./add-dashboard-user-db.sh"
+          target: "~/.deploy/${{ github.event.repository.name }}/"
+      
+      # Deploy services using docker compose
+      - name: Remote docker-compose deployment via ssh
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name || 'manual' }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          envs: APPTOKEN,USERNAME,WORKFLOW_NAME
+          script: |
+            cd ~/.deploy/${{ github.event.repository.name }}
+            
+            # Selectively pull images based on what workflow triggered this
+            if [[ "$WORKFLOW_NAME" == "Build Dashboard" || "$WORKFLOW_NAME" == "manual" ]]; then
+              docker compose -f compose.prod.yml pull dashboard
+            fi
+            
+            if [[ "$WORKFLOW_NAME" == "Build Data Collector" || "$WORKFLOW_NAME" == "manual" ]]; then
+              docker compose -f compose.prod.yml pull data-collector
+            fi
+            
+            # Run all services to ensure dependencies are up
+            docker compose -f compose.prod.yml up -d

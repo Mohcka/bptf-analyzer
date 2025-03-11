@@ -1,0 +1,32 @@
+name: Build Data Collector
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'apps/bptf-analyzer-data-collector/**'
+      - '.github/workflows/build-data-collector.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      app_changed: true
+      app_name: data-collector
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        
+      - name: Install dependencies
+        working-directory: ./apps/bptf-analyzer-data-collector
+        run: bun install
+        
+      - name: Build
+        working-directory: ./apps/bptf-analyzer-data-collector
+        run: bun run build || echo "No build script"
+        
+      # Optional: Run tests
+      # - name: Test
+      #   working-directory: ./apps/bptf-analyzer-data-collector
+      #   run: bun test || echo "No tests specified"

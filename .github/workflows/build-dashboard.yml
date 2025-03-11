@@ -1,0 +1,47 @@
+name: Build Dashboard
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'apps/bptf-analyzer-dashboard/**'
+      - '.github/workflows/build-dashboard.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      app_changed: true
+      app_name: dashboard
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        
+      - name: Install dependencies
+        working-directory: ./apps/bptf-analyzer-dashboard
+        run: bun install
+        
+      - name: Build
+        working-directory: ./apps/bptf-analyzer-dashboard
+        run: bun run build || echo "No build script"
+      
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '23'
+      #     cache: 'npm'
+      #     cache-dependency-path: apps/bptf-analyzer-dashboard/package-lock.json
+          
+      # - name: Install dependencies
+      #   working-directory: ./apps/bptf-analyzer-dashboard
+      #   run: npm ci
+        
+      # - name: Build
+      #   working-directory: ./apps/bptf-analyzer-dashboard
+      #   run: npm run build
+        
+      # Optional: Run tests
+      # - name: Test
+      #   working-directory: ./apps/bptf-analyzer-dashboard
+      #   run: npm test || echo "No tests specified"
