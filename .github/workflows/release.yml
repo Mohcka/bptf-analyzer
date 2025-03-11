@@ -8,7 +8,7 @@ on:
     types:
       - completed
     branches:
-      - dev
+      - main
   # Keep manual trigger option
   workflow_dispatch:
     inputs:
