@@ -133,7 +133,7 @@ jobs:
           echo "DASHBOARD_DB_USERNAME=${{ secrets.DASHBOARD_DB_USERNAME }}" >> .env
           echo "DASHBOARD_DB_PASSWORD=${{ secrets.DASHBOARD_DB_PASSWORD }}" >> .env
           echo "POSTGRES_DB=bptf_analyzer" >> .env
-          echo "DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}" >> .env
+          echo "DATABASE_URL=postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/bptf_analyzer" >> .env
           echo "PGADMIN_EMAIL=${{ secrets.PGADMIN_EMAIL }}" >> .env
           echo "PGADMIN_PASSWORD=${{ secrets.PGADMIN_PASSWORD }}" >> .env
           echo "RETENTION_HOURS=6" >> .env
