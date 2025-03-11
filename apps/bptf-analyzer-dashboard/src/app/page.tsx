@@ -7,7 +7,7 @@ export default function Home() {
       <main className="flex flex-col gap-6 md:gap-8 items-center w-full max-w-5xl">
         <div className="text-center pt-10 md:pt-4">
           <h1 className="text-2xl md:text-3xl lg:text-4xl">Trending Items on BPTF 📊</h1>
-          <p className="text-xs md:text-sm text-zinc-500 mt-1 md:mt-2">(within the last 6 hours - new data will take around half a minute to retrieve)</p>
+          <p className="text-xs md:text-sm text-zinc-500 mt-1 md:mt-2">(within the last 6 hours - fresh data will take around half a minute to retrieve)</p>
         </div>
         <TrendingItemsList />
       </main>
