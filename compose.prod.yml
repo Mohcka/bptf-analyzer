@@ -13,7 +13,7 @@ services:
       - DASHBOARD_DB_PASSWORD=${DASHBOARD_DB_PASSWORD}
       - RETENTION_HOURS=${RETENTION_HOURS}
       - CLEANUP_INTERVAL_MINUTES=${CLEANUP_INTERVAL_MINUTES}
-    command: /bin/sh - c "bun dev:db:push:force && bun start"
+    command: /bin/sh -c "bun dev:db:push:force && bun start"
     restart: always
     deploy:
       resources:
