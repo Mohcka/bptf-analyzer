@@ -80,7 +80,7 @@ jobs:
       # Build and push data-collector image only if it changed
       - name: Build and push data-collector image
         if: ${{ env.BUILD_DATA_COLLECTOR == 'true' }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           file: ./apps/bptf-analyzer-data-collector/Dockerfile
           context: ./apps/bptf-analyzer-data-collector
@@ -90,7 +90,7 @@ jobs:
       # Build and push dashboard image only if it changed
       - name: Build and push dashboard image
         if: ${{ env.BUILD_DASHBOARD == 'true' }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           file: ./apps/bptf-analyzer-dashboard/Dockerfile
           context: ./apps/bptf-analyzer-dashboard
@@ -133,7 +133,7 @@ jobs:
           echo "DASHBOARD_DB_USERNAME=${{ secrets.DASHBOARD_DB_USERNAME }}" >> .env
           echo "DASHBOARD_DB_PASSWORD=${{ secrets.DASHBOARD_DB_PASSWORD }}" >> .env
           echo "POSTGRES_DB=bptf_analyzer" >> .env
-          echo "DATABASE_URL=postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:${{ secrets.POSTGRES_PORT }}/${{ secrets.POSTGRES_DB }}" >> .env
+          echo "DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}" >> .env
           echo "PGADMIN_EMAIL=${{ secrets.PGADMIN_EMAIL }}" >> .env
           echo "PGADMIN_PASSWORD=${{ secrets.PGADMIN_PASSWORD }}" >> .env
           echo "RETENTION_HOURS=6" >> .env
