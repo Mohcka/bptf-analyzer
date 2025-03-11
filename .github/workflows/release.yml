@@ -167,6 +167,9 @@ jobs:
           port: 22
           envs: APPTOKEN,USERNAME,WORKFLOW_NAME
           script: |
+            # Authenticate with GitHub Container Registry
+            echo "Logging into GitHub Container Registry..."
+            echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
             cd ~/.deploy/${{ github.event.repository.name }}
             
             # Selectively pull images based on what workflow triggered this
