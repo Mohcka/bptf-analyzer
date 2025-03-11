@@ -7,7 +7,13 @@ services:
     # Expose to host only (not public)
     ports:
       - "127.0.0.1:3001:3000"
-    command: /bin/sh -c "bun dev:db:push:force && bun start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DASHBOARD_DB_USERNAME=${DASHBOARD_DB_USERNAME}
+      - DASHBOARD_DB_PASSWORD=${DASHBOARD_DB_PASSWORD}
+      - RETENTION_HOURS=${RETENTION_HOURS}
+      - CLEANUP_INTERVAL_MINUTES=${CLEANUP_INTERVAL_MINUTES}
+    command: /bin/sh - c "bun dev:db:push:force && bun start"
     restart: always
     deploy:
       resources:
@@ -25,6 +31,9 @@ services:
     # Expose to host only (not public)
     ports:
       - "127.0.0.1:3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     restart: always
     deploy:
       resources:
