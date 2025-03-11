@@ -4,12 +4,11 @@ permissions:
   contents: write
 on:
   workflow_run:
-    workflows: ["Build Dashboard", "Build Data Collector"]
+    workflows: [Build Dashboard, Build Data Collector]
     types:
       - completed
     branches:
       - dev
-      - main
   # Keep manual trigger option
   workflow_dispatch:
     inputs:
