@@ -1,0 +1,47 @@
+name: Release
+permissions:
+  packages: write
+  contents: write
+on:
+  # Deploy on pushes to dev branch
+  push:
+    branches:
+      - dev
+
+jobs:
+  push_to_registry:
+    runs-on: ubuntu-24.04
+    if: ${{ github.event.workflow_run.conclusion != 'failure' }}
+    steps:
+      # Checkout latest or specific tag (no submodules flag needed anymore)
+      - name: checkout
+        if: ${{ github.event.inputs.version == '' || github.event.inputs.version == 'latest' }}
+        uses: actions/checkout@v3
+        
+      - name: checkout tag
+        if: ${{ github.event.inputs.version != '' && github.event.inputs.version != 'latest' }}
+        uses: actions/checkout@v3
+        with:
+          ref: refs/tags/${{ github.event.inputs.version }}
+          
+      # ...existing code...
+      
+      # Build and push data-collector image (updated context)
+      - name: Build and push data-collector image
+        uses: docker/build-push-action@v3
+        if: ${{ github.event.inputs.version == '' || github.event.inputs.version == 'latest' }}
+        with:
+          file: ./apps/bptf-analyzer-data-collector/Dockerfile
+          context: .  # Changed from ./apps/bptf-analyzer-data-collector to root context
+          push: true
+          tags: ghcr.io/${{ env.image_repository_name }}/data-collector:${{ env.TAG_NAME }}
+      
+      # Build and push dashboard image (updated context)
+      - name: Build and push dashboard image
+        uses: docker/build-push-action@v3
+        if: ${{ github.event.inputs.version == '' || github.event.inputs.version == 'latest' }}
+        with:
+          file: ./apps/bptf-analyzer-dashboard/Dockerfile
+          context: .  # Changed from ./apps/bptf-analyzer-dashboard to root context
+          push: true
+          tags: ghcr.io/${{ env.image_repository_name }}/dashboard:${{ env.TAG_NAME }}
