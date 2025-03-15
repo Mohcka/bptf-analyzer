@@ -136,7 +136,7 @@ jobs:
           echo "DATABASE_URL=postgres://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/bptf_analyzer" >> .env
           echo "PGADMIN_EMAIL=${{ secrets.PGADMIN_EMAIL }}" >> .env
           echo "PGADMIN_PASSWORD=${{ secrets.PGADMIN_PASSWORD }}" >> .env
-          echo "RETENTION_HOURS=6" >> .env
+          echo "RETENTION_HOURS=24" >> .env
           echo "CLEANUP_INTERVAL_MINUTES=15" >> .env
           echo "NEXT_PUBLIC_API_URL=http://data-collector:3000" >> .env
           echo "IMAGE_REPO=${{ env.image_repository_name }}" >> .env

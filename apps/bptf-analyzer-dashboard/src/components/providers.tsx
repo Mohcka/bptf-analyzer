@@ -4,6 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 
@@ -46,6 +47,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       persistOptions={{ persister }}
     >
       {children}
+      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
     </PersistQueryClientProvider>
   );
 }

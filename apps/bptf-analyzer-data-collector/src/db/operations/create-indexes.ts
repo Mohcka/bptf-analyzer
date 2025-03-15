@@ -32,84 +32,34 @@ export async function createRecommendedIndexes(): Promise<number> {
     console.log('Creating recommended indexes...');
     let createdCount = 0;
 
-    // Listed date index (DESC) for sorting
+    // For the items table - quality filtering
     if (await createIndexIfNotExists(
-      'idx_listed_at_desc',
-      `CREATE INDEX IF NOT EXISTS idx_listed_at_desc ON listing_events (listed_at DESC)`
+      'idx_items_quality',
+      `CREATE INDEX IF NOT EXISTS idx_items_quality ON bptf_items (item_quality_name)`
     )) createdCount++;
 
-    // User steam ID index
+    // For hourly stats - timestamp + price filtering
     if (await createIndexIfNotExists(
-      'idx_user_steam_id',
-      `CREATE INDEX IF NOT EXISTS idx_steam_id ON listing_events (steam_id)`
+      'idx_hourly_stats_timestamp_price',
+      `CREATE INDEX IF NOT EXISTS idx_hourly_stats_timestamp_price ON bptf_item_hourly_stats (hour_timestamp DESC, avg_price_value)`
     )) createdCount++;
 
-    // Listing ID index
+    // For individual item lookups by name + time
     if (await createIndexIfNotExists(
-      'idx_listing_id',
-      `CREATE INDEX IF NOT EXISTS idx_listing_id ON listing_events (listing_id)`
+      'idx_hourly_stats_item_timestamp',
+      `CREATE INDEX IF NOT EXISTS idx_hourly_stats_item_timestamp ON bptf_item_hourly_stats (item_name, hour_timestamp DESC)`
+    )) createdCount++;
+    
+    // For high update count items
+    if (await createIndexIfNotExists(
+      'idx_hourly_stats_update_count',
+      `CREATE INDEX IF NOT EXISTS idx_hourly_stats_update_count ON bptf_item_hourly_stats (update_count DESC)`
     )) createdCount++;
 
-    // Created at index
+    // For filtered queries with price ranges
     if (await createIndexIfNotExists(
-      'idx_created_at',
-      `CREATE INDEX IF NOT EXISTS idx_created_at ON listing_events (created_at)`
-    )) createdCount++;
-
-    // Base name index
-    if (await createIndexIfNotExists(
-      'idx_base_name',
-      `CREATE INDEX IF NOT EXISTS idx_base_name ON listing_events (base_name)`
-    )) createdCount++;
-
-    // Item name index
-    if (await createIndexIfNotExists(
-      'idx_item_name',
-      `CREATE INDEX IF NOT EXISTS idx_item_name ON listing_events (item_name)`
-    )) createdCount++;
-
-    // Market name index 
-    if (await createIndexIfNotExists(
-      'idx_market_name',
-      `CREATE INDEX IF NOT EXISTS idx_market_name ON listing_events (market_name)`
-    )) createdCount++;
-
-    // Item quality name index
-    if (await createIndexIfNotExists(
-      'idx_item_quality_name',
-      `CREATE INDEX IF NOT EXISTS idx_item_quality_name ON listing_events (item_quality_name)`
-    )) createdCount++;
-
-    // Event index for filtering by event type
-    if (await createIndexIfNotExists(
-      'idx_event',
-      `CREATE INDEX IF NOT EXISTS idx_event ON listing_events (event)`
-    )) createdCount++;
-
-    // Compound index for event and createdAt (for queries that filter on both)
-    if (await createIndexIfNotExists(
-      'idx_event_created_at',
-      `CREATE INDEX IF NOT EXISTS idx_event_created_at ON listing_events (event, created_at)`
-    )) createdCount++;
-
-    // Compound index for item_name, event, and created_at
-    if (await createIndexIfNotExists(
-      'idx_item_name_event_created_at',
-      `CREATE INDEX IF NOT EXISTS idx_item_name_event_created_at ON listing_events (item_name, event, created_at)`
-    )) createdCount++;
-
-    // Add composite index for trending query
-    if (await createIndexIfNotExists(
-      'idx_event_item_quality_created',
-      `CREATE INDEX IF NOT EXISTS idx_event_item_quality_created ON listing_events 
-       (event, item_name, item_quality_name, created_at DESC)`
-    )) createdCount++;
-
-    // Add functional index for hourly data query if your PostgreSQL version supports it
-    if (await createIndexIfNotExists(
-      'idx_item_name_event_created_hour',
-      `CREATE INDEX IF NOT EXISTS idx_item_name_event_created_hour ON listing_events 
-       (item_name, event, date_trunc('hour', created_at))`
+      'idx_hourly_stats_price_timestamp',
+      `CREATE INDEX IF NOT EXISTS idx_hourly_stats_price_timestamp ON bptf_item_hourly_stats (avg_price_value, hour_timestamp DESC)`
     )) createdCount++;
 
     if (createdCount > 0) {

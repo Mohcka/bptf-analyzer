@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, X, Home, TrendingUp, Settings } from "lucide-react";
+import { Menu, X, BarChart, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 // Sidebar menu items
 const menuItems = [
-  { name: "Home", icon: Home, href: "/" },
-  { name: "Trending", icon: TrendingUp, href: "/trending" },
-  { name: "Settings", icon: Settings, href: "/settings" },
+  { name: "Trending", icon: BarChart, href: "/" },
+  { name: "Settings", icon: Settings, href: "/settings", disabled: true },
 ];
 
 export function Sidebar() {
@@ -82,14 +81,23 @@ export function Sidebar() {
             <ul className="space-y-2">
               {menuItems.map((item) => (
                 <li key={item.name}>
-                  <a 
-                    href={item.href} 
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent text-foreground"
-                  >
-                    <item.icon size={18} />
-                    <span>{item.name}</span>
-                  </a>
+                  {item.disabled ? (
+                    <span 
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground cursor-not-allowed opacity-50"
+                    >
+                      <item.icon size={18} />
+                      <span>{item.name}</span>
+                    </span>
+                  ) : (
+                    <a 
+                      href={item.href} 
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent text-foreground"
+                    >
+                      <item.icon size={18} />
+                      <span>{item.name}</span>
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -108,13 +116,22 @@ export function Sidebar() {
             <ul className="space-y-2">
               {menuItems.map((item) => (
                 <li key={item.name}>
-                  <a 
-                    href={item.href} 
-                    className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent text-foreground"
-                  >
-                    <item.icon size={18} />
-                    <span>{item.name}</span>
-                  </a>
+                  {item.disabled ? (
+                    <span 
+                      className="flex items-center gap-3 px-3 py-2 rounded-md text-muted-foreground cursor-not-allowed opacity-50"
+                    >
+                      <item.icon size={18} />
+                      <span>{item.name}</span>
+                    </span>
+                  ) : (
+                    <a 
+                      href={item.href} 
+                      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent text-foreground"
+                    >
+                      <item.icon size={18} />
+                      <span>{item.name}</span>
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

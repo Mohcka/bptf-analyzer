@@ -151,3 +151,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add to your global CSS file if you want additional styling */
+.fallback-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
