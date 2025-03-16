@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 // import { DatePickerWithRange } from "@/components/date-range-picker";
 import { HoursSlider } from "@/components/listings-search/hours-slider";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,9 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { useEffect } from "react";
 
-export type SearchFormData = {
+export type FilterFormData = {
   dateRange: { from: Date; to: Date };
   timeFrame: number;
   minPrice?: number;
@@ -43,30 +44,73 @@ const itemLimits = [
   { value: 27, label: "27 items" },
 ];
 
-interface ListingsSearchFormProps {
+interface FilterFormProps {
   isLoading?: boolean;
-  onSubmit?: (data: SearchFormData) => void;
+  onSubmit?: (data: FilterFormData) => void;
 }
 
-export default function ListingsSearchForm({ 
+export default function FilterForm({ 
   isLoading = false,
   onSubmit 
-}: ListingsSearchFormProps) {
-  const { control, handleSubmit, register } = useForm<SearchFormData>({
-    defaultValues: {
-      dateRange: {
-        from: new Date(),
-        to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      },
-      timeFrame: 6,
-      minPrice: undefined,
-      maxPrice: undefined,
-      quality: "any",
-      limit: 9
+}: FilterFormProps) {
+  // Get stored form values or use defaults
+  const getStoredFormValues = () => {
+    if (typeof window === 'undefined') return defaultFormValues;
+    
+    const storedValues = localStorage.getItem('listingsFilterForm');
+    if (storedValues) {
+      const parsedValues = JSON.parse(storedValues);
+      // Convert date strings back to Date objects
+      return {
+        ...parsedValues,
+        dateRange: {
+          from: parsedValues.dateRange?.from ? new Date(parsedValues.dateRange.from) : new Date(),
+          to: parsedValues.dateRange?.to ? new Date(parsedValues.dateRange.to) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
+      };
     }
+    
+    // Default values if nothing stored
+    return defaultFormValues;
+  };
+
+  const defaultFormValues = {
+    dateRange: {
+      from: new Date(),
+      to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    },
+    timeFrame: 6,
+    minPrice: undefined,
+    maxPrice: undefined,
+    quality: "any",
+    limit: 9
+  };
+
+  const { control, handleSubmit, register, reset } = useForm<FilterFormData>({
+    defaultValues: getStoredFormValues()
   });
 
-  const handleFormSubmit = (data: SearchFormData) => {
+  // Watch all form values and save to localStorage when they change
+  const formValues = useWatch({ control });
+  useEffect(() => {
+    if (formValues) {
+      localStorage.setItem('listingsFilterForm', JSON.stringify(formValues));
+    }
+  }, [formValues]);
+
+  const resetForm = () => {
+    reset(defaultFormValues);
+    
+    const minPriceInput = document.getElementById('minPrice') as HTMLInputElement;
+    const maxPriceInput = document.getElementById('maxPrice') as HTMLInputElement;
+
+    if (minPriceInput) minPriceInput.value = '';
+    if (maxPriceInput) maxPriceInput.value = '';
+
+    localStorage.removeItem('listingsFilterForm');
+  };
+
+  const handleFormSubmit = (data: FilterFormData) => {
     // Convert "any" to undefined for the backend
     const processedData = {
       ...data,
@@ -81,9 +125,19 @@ export default function ListingsSearchForm({
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Trending Items</h2>
-        <Button type="submit" disabled={isLoading}> 
-          {isLoading ? "Loading..." : "Search"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={resetForm} 
+            disabled={isLoading}
+          >
+            Reset
+          </Button>
+          <Button type="submit" disabled={isLoading}> 
+            {isLoading ? "Loading..." : "Search"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

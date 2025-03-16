@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns"
 import {
@@ -28,29 +28,56 @@ import {
   TooltipProps
 } from "recharts";
 import { getItemsWithFilters } from "@/actions/get-trending-items";
-import ListingsSearchForm, { SearchFormData } from "@/components/listings-search/listings-filter";
+import FilterForm, { FilterFormData } from "@/components/listings-search/listings-filter-form";
 import { ItemFilterOptions } from "@/db/queries/get-items-with-filters";
 
 
 export function TrendingItemsList() {
-  // State to store current filter parameters
-  const [filters, setFilters] = useState<ItemFilterOptions>({
+  // Default filters
+  const defaultFilters = {
     timeRangeHours: 6,
     minPrice: undefined as number | undefined,
     maxPrice: undefined as number | undefined,
     qualityName: undefined as string | undefined,
     limit: 9
-  });
+  };
 
-  // Use filters in your query
+  // State for filters with defaults
+  const [filters, setFilters] = useState<ItemFilterOptions>(defaultFilters);
+  
+  // State to track if we've loaded from localStorage
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
+
+  // Load saved filters from localStorage on component mount
+  useEffect(() => {
+    const storedFormData = localStorage.getItem('listingsFilterForm');
+    if (storedFormData) {
+      try {
+        const parsedFormData = JSON.parse(storedFormData);
+        setFilters({
+          timeRangeHours: parsedFormData.timeFrame || 6,
+          minPrice: parsedFormData.minPrice,
+          maxPrice: parsedFormData.maxPrice,
+          qualityName: parsedFormData.quality === "any" ? undefined : parsedFormData.quality,
+          limit: parsedFormData.limit || 9
+        });
+      } catch (error) {
+        console.error("Error parsing stored filter data:", error);
+      }
+    }
+    setFiltersInitialized(true);
+  }, []);
+
+  // Use filters in your query, only enabled after filters are initialized
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ['trending-items', filters],
     queryFn: () => getItemsWithFilters(filters),
     placeholderData: (prevData) => prevData,
+    enabled: filtersInitialized, // Only run the query after filters are initialized
   });
 
   // Handle form submission
-  const handleSearch = (formData: SearchFormData) => {
+  const handleSearch = (formData: FilterFormData) => {
     // Map form data to query parameters
     const queryFilters = {
       timeRangeHours: formData.timeFrame,
@@ -70,7 +97,7 @@ export function TrendingItemsList() {
     <div className="space-y-6">
       {/* Always show the search form */}
       <div className="w-full border rounded-lg p-4 bg-card">
-        <ListingsSearchForm
+        <FilterForm
           isLoading={isLoading || isFetching}
           onSubmit={handleSearch}
         />
