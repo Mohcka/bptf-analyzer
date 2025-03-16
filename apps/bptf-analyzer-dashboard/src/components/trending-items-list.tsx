@@ -150,7 +150,7 @@ export function TrendingItemsList() {
                   keys: point.avgKeys || 0,
                   metal: point.avgMetal || 0,
                 };
-              }).slice(0, -1)
+              })
               : [];
 
             // Configure chart

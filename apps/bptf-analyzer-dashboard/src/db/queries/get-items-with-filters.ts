@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, lt, gte, sql, SQL } from 'drizzle-orm';
+import { and, desc, eq, gt, lt, gte, lte, sql, SQL } from 'drizzle-orm';
 import { db } from "@/db";
 import { bptfItemHourlyStatsTable, bptfItemsTable } from "@/db/schema";
 
@@ -19,9 +19,14 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
   const startTime = new Date();
   startTime.setHours(startTime.getHours() - timeRangeHours);
 
+  // Calculate the end time (excluding the most recent hour)
+  const endTime = new Date();
+  endTime.setHours(endTime.getHours() - 1, 0, 0, 0);
+
   // Initialize conditions array
   const conditions: SQL[] = [
-    gte(bptfItemHourlyStatsTable.hourTimestamp, startTime)
+    gte(bptfItemHourlyStatsTable.hourTimestamp, startTime),
+    lte(bptfItemHourlyStatsTable.hourTimestamp, endTime)
   ];
 
   // Apply price minimum if provided
@@ -79,7 +84,8 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
         .where(
           and(
             eq(bptfItemHourlyStatsTable.itemName, item.itemName),
-            gte(bptfItemHourlyStatsTable.hourTimestamp, startTime)
+            gte(bptfItemHourlyStatsTable.hourTimestamp, startTime),
+            lte(bptfItemHourlyStatsTable.hourTimestamp, endTime)
           )
         )
         .orderBy(bptfItemHourlyStatsTable.hourTimestamp);
