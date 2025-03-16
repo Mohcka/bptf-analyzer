@@ -3,7 +3,8 @@ FROM node:23-alpine as base
 FROM base as deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install --frozen-lockfile
+# Use legacy-peer-deps to resolve the date-fns/react-day-picker conflict
+RUN npm install --frozen-lockfile --legacy-peer-deps
 
 FROM deps as builder
 WORKDIR /app

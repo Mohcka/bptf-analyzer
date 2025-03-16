@@ -32,15 +32,16 @@ async function cleanupOldListingEvents() {
  */
 async function cleanupOldHourlyStats() {
   try {
+    const hourlyRetention = config.RETENTION_HOURS || 8;
     const cutoffTime = new Date();
-    cutoffTime.setHours(cutoffTime.getHours() - 8);
+    cutoffTime.setHours(cutoffTime.getHours() - hourlyRetention);
     
     console.log(`Deleting hourly stats older than ${cutoffTime.toISOString()}`);
     
     const result = await db.delete(bptfItemHourlyStatsTable)
       .where(lt(bptfItemHourlyStatsTable.hourTimestamp, cutoffTime));
     
-    console.log(`Deleted old hourly stats (retention: 8h)`);
+    console.log(`Deleted old hourly stats (retention: ${hourlyRetention}h)`);
   } catch (error) {
     console.error('Error cleaning up old hourly stats data:', error);
   }
