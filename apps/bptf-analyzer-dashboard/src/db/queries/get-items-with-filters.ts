@@ -23,11 +23,14 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
   const endTime = new Date();
   endTime.setHours(endTime.getHours() - 1, 0, 0, 0);
 
-  // Initialize conditions array
-  const conditions: SQL[] = [
+  // Store the time range conditions for reuse
+  const timeRangeConditions = [
     gte(bptfItemHourlyStatsTable.hourTimestamp, startTime),
     lte(bptfItemHourlyStatsTable.hourTimestamp, endTime)
   ];
+
+  // Initialize conditions array with the time range conditions
+  const conditions: SQL[] = [...timeRangeConditions];
 
   // Apply price minimum if provided
   if (options.minPrice !== undefined) {
@@ -84,8 +87,7 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
         .where(
           and(
             eq(bptfItemHourlyStatsTable.itemName, item.itemName),
-            gte(bptfItemHourlyStatsTable.hourTimestamp, startTime),
-            lte(bptfItemHourlyStatsTable.hourTimestamp, endTime)
+            ...timeRangeConditions
           )
         )
         .orderBy(bptfItemHourlyStatsTable.hourTimestamp);
