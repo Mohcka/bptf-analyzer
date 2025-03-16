@@ -17,7 +17,7 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
   
   // Calculate the timestamp for the beginning of our data window
   const startTime = new Date();
-  startTime.setHours(startTime.getHours() - timeRangeHours);
+  startTime.setHours(startTime.getHours() - timeRangeHours, 0, 0, 0); // Round to the hour
 
   // Calculate the end time (excluding the most recent hour)
   const endTime = new Date();
