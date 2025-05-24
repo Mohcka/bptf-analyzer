@@ -168,3 +168,4 @@ pkg/
 
 # BPTF Analyzer specific Go app
 /apps/bptf-analyzer-data-collector-go
+.vscode/mcp.json
