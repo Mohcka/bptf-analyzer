@@ -10,7 +10,7 @@ export default function Home() {
           <h1 className="text-2xl md:text-3xl lg:text-4xl flex items-center justify-center gap-2">
             Trending Items on BPTF <TrendingUp className="text-green-500" size={28} />
           </h1>
-          <p className="text-xs md:text-sm text-zinc-500 mt-1 md:mt-2">(fresh data will take a few seconds to retrieve)</p>
+          <p className="text-xs md:text-sm text-zinc-500 mt-1 md:mt-2">(new data will take a few seconds to retrieve)</p>
         </div>
         <TrendingItemsList />
       </main>
