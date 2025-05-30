@@ -1,4 +1,4 @@
-import { eq, gte, lte, sql, SQL } from 'drizzle-orm';
+import { eq, gte, lte, sql, SQL, ilike } from 'drizzle-orm';
 import { db } from "@/db";
 import { bptfItemHourlyStatsTable, bptfItemsTable } from "@/db/schema";
 
@@ -8,6 +8,7 @@ export interface ItemFilterOptions {
   maxPrice?: number;
   qualityName?: string;
   limit?: number;
+  searchTerm?: string;
 }
 
 export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
@@ -42,6 +43,11 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
     conditions.push(eq(bptfItemsTable.itemQualityName, options.qualityName));
   }
 
+  // Apply search filter
+  if (options.searchTerm && options.searchTerm.trim() !== '') {
+    conditions.push(ilike(bptfItemsTable.itemName, `%${options.searchTerm.trim()}%`));
+  }
+
   // OPTIMIZED: Single query using CTE and window functions to leverage idx_hourly_stats_main_query
   const results = await db.execute(sql`
     WITH ranked_items AS (
@@ -59,6 +65,7 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
         ${options.minPrice ? sql`AND h.avg_price_value >= ${options.minPrice}` : sql``}
         ${options.maxPrice ? sql`AND h.avg_price_value <= ${options.maxPrice}` : sql``}
         ${options.qualityName ? sql`AND i.item_quality_name = ${options.qualityName}` : sql``}
+        ${options.searchTerm && options.searchTerm.trim() !== '' ? sql`AND i.item_name ILIKE ${'%' + options.searchTerm.trim() + '%'}` : sql``}
       GROUP BY h.item_name, i.item_quality_name, i.image_url, i.item_quality_color
     ),
     top_items AS (

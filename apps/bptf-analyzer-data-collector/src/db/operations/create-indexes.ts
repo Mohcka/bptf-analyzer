@@ -70,6 +70,12 @@ export async function createRecommendedIndexes(): Promise<number> {
       `CREATE INDEX IF NOT EXISTS idx_hourly_stats_item_name_fk ON bptf_item_hourly_stats (item_name)`
     )) createdCount++;
 
+    // NEW: Text search index for item name filtering (ILIKE optimization)
+    if (await createIndexIfNotExists(
+      'idx_items_quality_name_search',
+      `CREATE INDEX IF NOT EXISTS idx_items_quality_name_search ON bptf_items (item_quality_name, item_name text_pattern_ops)`
+    )) createdCount++;
+
     if (createdCount > 0) {
       console.log(`Created ${createdCount} new indexes successfully`);
     } else {

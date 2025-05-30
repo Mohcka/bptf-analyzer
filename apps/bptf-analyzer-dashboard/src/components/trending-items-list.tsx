@@ -59,7 +59,8 @@ export function TrendingItemsList() {
           minPrice: parsedFormData.minPrice,
           maxPrice: parsedFormData.maxPrice,
           qualityName: parsedFormData.quality === "any" ? undefined : parsedFormData.quality,
-          limit: parsedFormData.limit || 9
+          limit: parsedFormData.limit || 9,
+          searchTerm: parsedFormData.searchTerm
         });
       } catch (error) {
         console.error("Error parsing stored filter data:", error);
@@ -84,7 +85,8 @@ export function TrendingItemsList() {
       minPrice: formData.minPrice,
       maxPrice: formData.maxPrice,
       qualityName: formData.quality === "any" ? undefined : formData.quality,
-      limit: formData.limit
+      limit: formData.limit,
+      searchTerm: formData.searchTerm
     };
 
     // Update filters state (will trigger query refetch due to queryKey change)

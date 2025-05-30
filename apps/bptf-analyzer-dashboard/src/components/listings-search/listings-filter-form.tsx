@@ -22,6 +22,7 @@ export type FilterFormData = {
   maxPrice?: number;
   quality?: string;
   limit: number;
+  searchTerm?: string;
 };
 
 // Common TF2 item qualities
@@ -83,7 +84,8 @@ export default function FilterForm({
     minPrice: undefined,
     maxPrice: undefined,
     quality: "any",
-    limit: 9
+    limit: 9,
+    searchTerm: undefined
   };
 
   const { control, handleSubmit, register, reset } = useForm<FilterFormData>({
@@ -103,18 +105,22 @@ export default function FilterForm({
     
     const minPriceInput = document.getElementById('minPrice') as HTMLInputElement;
     const maxPriceInput = document.getElementById('maxPrice') as HTMLInputElement;
+    const searchInput = document.getElementById('searchTerm') as HTMLInputElement;
 
     if (minPriceInput) minPriceInput.value = '';
     if (maxPriceInput) maxPriceInput.value = '';
+    if (searchInput) searchInput.value = '';
 
     localStorage.removeItem('listingsFilterForm');
   };
 
   const handleFormSubmit = (data: FilterFormData) => {
     // Convert "any" to undefined for the backend
+    // Trim search term and convert empty strings to undefined
     const processedData = {
       ...data,
-      quality: data.quality === "any" ? undefined : data.quality
+      quality: data.quality === "any" ? undefined : data.quality,
+      searchTerm: data.searchTerm && data.searchTerm.trim() !== '' ? data.searchTerm.trim() : undefined
     };
     
     console.log("Form submitted:", processedData);
@@ -178,6 +184,22 @@ export default function FilterForm({
             )}
           />
         </div>
+      </div>
+
+      <div className="flex flex-col space-y-2">
+        <Label htmlFor="searchTerm">Search Item Name</Label>
+        <Input
+          id="searchTerm"
+          type="text"
+          placeholder="Search for items... (e.g., 'Strange Scattergun')"
+          disabled={isLoading}
+          {...register("searchTerm", { 
+            setValueAs: value => value === "" ? undefined : value?.trim() 
+          })}
+        />
+        <p className="text-xs text-muted-foreground">
+          Find items by name using case-insensitive search
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
