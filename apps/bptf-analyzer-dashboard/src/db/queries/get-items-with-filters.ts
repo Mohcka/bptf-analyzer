@@ -23,87 +23,95 @@ export async function queryItemsWithFilters(options: ItemFilterOptions = {}) {
   const endTime = new Date();
   endTime.setHours(endTime.getHours() - 1, 0, 0, 0);
 
-  // Store the time range conditions for reuse
-  const timeRangeConditions = [
+  // Build conditions array for filtering
+  const conditions: SQL[] = [
     gte(bptfItemHourlyStatsTable.hourTimestamp, startTime),
     lte(bptfItemHourlyStatsTable.hourTimestamp, endTime)
   ];
 
-  // Initialize conditions array with the time range conditions
-  const conditions: SQL[] = [...timeRangeConditions];
-
-  // Apply price minimum if provided
+  // Apply price filters
   if (options.minPrice !== undefined) {
-    conditions.push(gt(bptfItemHourlyStatsTable.avgPriceValue, options.minPrice.toString()));
+    conditions.push(gte(bptfItemHourlyStatsTable.avgPriceValue, options.minPrice.toString()));
   }
-
-  // Apply price maximum if provided
   if (options.maxPrice !== undefined) {
-    conditions.push(lt(bptfItemHourlyStatsTable.avgPriceValue, options.maxPrice.toString()));
+    conditions.push(lte(bptfItemHourlyStatsTable.avgPriceValue, options.maxPrice.toString()));
   }
 
-  // Apply quality filter if provided
+  // Apply quality filter
   if (options.qualityName) {
     conditions.push(eq(bptfItemsTable.itemQualityName, options.qualityName));
   }
 
-  // STEP 1: Get the most active items based on filters and total update count
-  const mostActiveItems = await db
-    .select({
-      itemName: bptfItemHourlyStatsTable.itemName,
-      totalActivityCount: sql<number>`sum(${bptfItemHourlyStatsTable.updateCount})`.as('total_activity'),
-      qualityName: bptfItemsTable.itemQualityName,
-      imageUrl: bptfItemsTable.itemImageUrl,
-      qualityColor: bptfItemsTable.itemColor,
-    })
-    .from(bptfItemHourlyStatsTable)
-    .innerJoin(
-      bptfItemsTable,
-      eq(bptfItemHourlyStatsTable.itemName, bptfItemsTable.itemName)
+  // OPTIMIZED: Single query using CTE and window functions to leverage idx_hourly_stats_main_query
+  const results = await db.execute(sql`
+    WITH ranked_items AS (
+      SELECT 
+        h.item_name,
+        i.item_quality_name,
+        i.image_url,
+        i.item_quality_color,
+        SUM(h.update_count) as total_activity,
+        ROW_NUMBER() OVER (ORDER BY SUM(h.update_count) DESC) as rn
+      FROM bptf_item_hourly_stats h
+      INNER JOIN bptf_items i ON h.item_name = i.item_name
+      WHERE h.hour_timestamp >= ${startTime} 
+        AND h.hour_timestamp <= ${endTime}
+        ${options.minPrice ? sql`AND h.avg_price_value >= ${options.minPrice}` : sql``}
+        ${options.maxPrice ? sql`AND h.avg_price_value <= ${options.maxPrice}` : sql``}
+        ${options.qualityName ? sql`AND i.item_quality_name = ${options.qualityName}` : sql``}
+      GROUP BY h.item_name, i.item_quality_name, i.image_url, i.item_quality_color
+    ),
+    top_items AS (
+      SELECT * FROM ranked_items WHERE rn <= ${limit}
     )
-    .where(and(...conditions))
-    .groupBy(
-      bptfItemHourlyStatsTable.itemName,
-      bptfItemsTable.itemQualityName,
-      bptfItemsTable.itemImageUrl,
-      bptfItemsTable.itemColor
-    )
-    .orderBy(desc(sql`total_activity`))
-    .limit(limit);
+    SELECT 
+      t.item_name,
+      t.item_quality_name,
+      t.image_url,
+      t.item_quality_color,
+      t.total_activity,
+      h.hour_timestamp,
+      h.update_count,
+      h.avg_price_value,
+      h.avg_price_usd,
+      h.avg_keys_amount,
+      h.avg_metal_amount
+    FROM top_items t
+    LEFT JOIN bptf_item_hourly_stats h ON t.item_name = h.item_name
+      AND h.hour_timestamp BETWEEN ${startTime} AND ${endTime}
+    ORDER BY t.total_activity DESC, t.item_name, h.hour_timestamp
+  `);
 
-  // STEP 2: For each matched item, fetch the detailed hourly data points
-  const itemsWithHourlyBreakdown = await Promise.all(
-    mostActiveItems.map(async (item) => {
-      const hourlyDataPoints = await db
-        .select({
-          timestamp: bptfItemHourlyStatsTable.hourTimestamp,
-          updates: bptfItemHourlyStatsTable.updateCount,
-          avgPrice: bptfItemHourlyStatsTable.avgPriceValue,
-          avgUsdPrice: bptfItemHourlyStatsTable.avgPriceUsd,
-          avgKeys: bptfItemHourlyStatsTable.avgKeysAmount,
-          avgMetal: bptfItemHourlyStatsTable.avgMetalAmount,
-        })
-        .from(bptfItemHourlyStatsTable)
-        .where(
-          and(
-            eq(bptfItemHourlyStatsTable.itemName, item.itemName),
-            ...timeRangeConditions
-          )
-        )
-        .orderBy(bptfItemHourlyStatsTable.hourTimestamp);
-
-      return {
+  // Process results efficiently into the expected format
+  const itemsMap = new Map();
+  
+  for (const row of results.rows) {
+    const itemName = row.item_name;
+    
+    if (!itemsMap.has(itemName)) {
+      itemsMap.set(itemName, {
         itemDetails: {
-          name: item.itemName,
-          quality: item.qualityName,
-          image: item.imageUrl,
-          color: item.qualityColor,
-          totalActivity: item.totalActivityCount,
+          name: itemName,
+          quality: row.item_quality_name,
+          image: row.image_url,
+          color: row.item_quality_color,
+          totalActivity: Number(row.total_activity),
         },
-        hourlyData: hourlyDataPoints
-      };
-    })
-  );
+        hourlyData: []
+      });
+    }
+    
+    if (row.hour_timestamp) {
+      itemsMap.get(itemName).hourlyData.push({
+        timestamp: row.hour_timestamp,
+        updates: row.update_count,
+        avgPrice: row.avg_price_value,
+        avgUsdPrice: row.avg_price_usd,
+        avgKeys: row.avg_keys_amount,
+        avgMetal: row.avg_metal_amount,
+      });
+    }
+  }
 
-  return itemsWithHourlyBreakdown;
+  return Array.from(itemsMap.values());
 }

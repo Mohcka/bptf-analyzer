@@ -336,11 +336,12 @@ export async function processBptfEventsFromWebsocket(events: BPTFListingEvent[])
 
 /**
  * Get top bptf items with their latest hourly stats
+ * Optimized to use the idx_hourly_stats_main_query index effectively
  */
 export async function getTopBptfItems(itemCount: number = 10, timeFrameInMinutes: number = 60) {
   const timeAgo = new Date(Date.now() - timeFrameInMinutes * 60 * 1000);
 
-  // Get trending items based on hourly stats table
+  // Optimized query that leverages the composite index (hour_timestamp DESC, item_name, update_count DESC)
   const items = await db
     .select({
       itemName: bptfItemsTable.itemName,
@@ -349,28 +350,43 @@ export async function getTopBptfItems(itemCount: number = 10, timeFrameInMinutes
       itemColor: bptfItemsTable.itemColor,
       updateCount: sql<number>`SUM(${bptfItemHourlyStatsTable.updateCount})`.as("updateCount"),
       deleteCount: sql<number>`SUM(${bptfItemHourlyStatsTable.deleteCount})`.as("deleteCount"),
-      // Calculate totalCount as the sum of updateCount and deleteCount
       totalCount: sql<number>`SUM(${bptfItemHourlyStatsTable.updateCount} + ${bptfItemHourlyStatsTable.deleteCount})`.as("totalCount"),
-      avgPriceValue: sql<number | null>`AVG(${bptfItemHourlyStatsTable.avgPriceValue})`.as("avgPriceValue"),
-      avgPriceUsd: sql<number | null>`AVG(${bptfItemHourlyStatsTable.avgPriceUsd})`.as("avgPriceUsd"),
-      avgKeysAmount: sql<number | null>`AVG(${bptfItemHourlyStatsTable.avgKeysAmount})`.as("avgKeysAmount"),
-      avgMetalAmount: sql<number | null>`AVG(${bptfItemHourlyStatsTable.avgMetalAmount})`.as("avgMetalAmount")
+      // Use weighted averages for more accurate pricing
+      avgPriceValue: sql<number | null>`
+        CASE WHEN SUM(${bptfItemHourlyStatsTable.updateCount}) > 0 
+        THEN SUM(COALESCE(${bptfItemHourlyStatsTable.avgPriceValue}::numeric, 0) * ${bptfItemHourlyStatsTable.updateCount}) / SUM(${bptfItemHourlyStatsTable.updateCount})
+        ELSE NULL END
+      `.as("avgPriceValue"),
+      avgPriceUsd: sql<number | null>`
+        CASE WHEN SUM(${bptfItemHourlyStatsTable.updateCount}) > 0 
+        THEN SUM(COALESCE(${bptfItemHourlyStatsTable.avgPriceUsd}::numeric, 0) * ${bptfItemHourlyStatsTable.updateCount}) / SUM(${bptfItemHourlyStatsTable.updateCount})
+        ELSE NULL END
+      `.as("avgPriceUsd"),
+      avgKeysAmount: sql<number | null>`
+        CASE WHEN SUM(${bptfItemHourlyStatsTable.updateCount}) > 0 
+        THEN SUM(COALESCE(${bptfItemHourlyStatsTable.avgKeysAmount}::numeric, 0) * ${bptfItemHourlyStatsTable.updateCount}) / SUM(${bptfItemHourlyStatsTable.updateCount})
+        ELSE NULL END
+      `.as("avgKeysAmount"),
+      avgMetalAmount: sql<number | null>`
+        CASE WHEN SUM(${bptfItemHourlyStatsTable.updateCount}) > 0 
+        THEN SUM(COALESCE(${bptfItemHourlyStatsTable.avgMetalAmount}::numeric, 0) * ${bptfItemHourlyStatsTable.updateCount}) / SUM(${bptfItemHourlyStatsTable.updateCount})
+        ELSE NULL END
+      `.as("avgMetalAmount")
     })
-    .from(bptfItemsTable)
-    .leftJoin(
-      bptfItemHourlyStatsTable,
-      and(
-        eq(bptfItemsTable.itemName, bptfItemHourlyStatsTable.itemName),
-        between(bptfItemHourlyStatsTable.hourTimestamp, timeAgo, new Date())
-      )
+    .from(bptfItemHourlyStatsTable)
+    .innerJoin(
+      bptfItemsTable,
+      eq(bptfItemHourlyStatsTable.itemName, bptfItemsTable.itemName)
     )
+    // This WHERE clause leverages idx_hourly_stats_main_query (hour_timestamp DESC, item_name, update_count DESC)
+    .where(gte(bptfItemHourlyStatsTable.hourTimestamp, timeAgo))
     .groupBy(
       bptfItemsTable.itemName,
       bptfItemsTable.itemQualityName,
       bptfItemsTable.itemImageUrl,
       bptfItemsTable.itemColor
     )
-    // Simple ordering by total activity
+    // Order by total activity to leverage the update_count DESC part of the index
     .orderBy(desc(sql`SUM(${bptfItemHourlyStatsTable.updateCount} + ${bptfItemHourlyStatsTable.deleteCount})`))
     .limit(itemCount);
 

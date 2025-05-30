@@ -56,10 +56,18 @@ export async function createRecommendedIndexes(): Promise<number> {
       `CREATE INDEX IF NOT EXISTS idx_hourly_stats_update_count ON bptf_item_hourly_stats (update_count DESC)`
     )) createdCount++;
 
-    // For filtered queries with price ranges
+    // REMOVED: idx_hourly_stats_price_timestamp (redundant with idx_hourly_stats_timestamp_price)
+
+    // NEW: Critical composite index for main aggregation query
     if (await createIndexIfNotExists(
-      'idx_hourly_stats_price_timestamp',
-      `CREATE INDEX IF NOT EXISTS idx_hourly_stats_price_timestamp ON bptf_item_hourly_stats (avg_price_value, hour_timestamp DESC)`
+      'idx_hourly_stats_main_query',
+      `CREATE INDEX IF NOT EXISTS idx_hourly_stats_main_query ON bptf_item_hourly_stats (hour_timestamp DESC, item_name, update_count DESC)`
+    )) createdCount++;
+
+    // NEW: Foreign key performance for joins
+    if (await createIndexIfNotExists(
+      'idx_hourly_stats_item_name_fk',
+      `CREATE INDEX IF NOT EXISTS idx_hourly_stats_item_name_fk ON bptf_item_hourly_stats (item_name)`
     )) createdCount++;
 
     if (createdCount > 0) {
