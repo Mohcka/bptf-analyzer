@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, lt, gte, lte, sql, SQL } from 'drizzle-orm';
+import { eq, gte, lte, sql, SQL } from 'drizzle-orm';
 import { db } from "@/db";
 import { bptfItemHourlyStatsTable, bptfItemsTable } from "@/db/schema";
 

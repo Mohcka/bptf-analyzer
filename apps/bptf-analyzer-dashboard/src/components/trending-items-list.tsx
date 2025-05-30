@@ -140,7 +140,7 @@ export function TrendingItemsList() {
 
             // Format data for the charts
             const chartData = hasChartData
-              ? hourlyData.map(point => {
+              ? hourlyData.map((point: { timestamp: string; updates: number; avgUsdPrice?: number | null; avgKeys?: number | null; avgMetal?: number | null }) => {
                 const date = new Date(point.timestamp);
                 return {
                   hour: usesTwelveHourFormat() ? format(date, "ha") : format(date, "HH:mm"),
